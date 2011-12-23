@@ -22,21 +22,46 @@ class FixymlCommand extends ContainerAwareCommand {
     protected function execute(InputInterface $input, OutputInterface $output) {
         $namespace = $input->getArgument('namespace');
 
-        foreach ($this->getModelFiles($namespace) as $file) {
+
+        $files = $this->getModelFiles($namespace);
+        $modelLocations = $this->locateModels($files, $namespace);
+        foreach ($files as $file) {
             $this->renameFile($file, $output);
-            $yml = \Symfony\Component\Yaml\Yaml::parse($file['path'] . $file['name']);
-            foreach ($yml as $modelName => $modelData) {
-                if (strpos($modelName, '\\') === false) {
-                    unset($yml[$modelName]);
-                    $output->write(sprintf('  > Fixing content of: <info>%s</info> ... ', $file['name']));
-                    $yml["$namespace\\{$file['bundle']}\\Entity\\$modelName"] = $modelData;
-                    file_put_contents($file['path'] . $file['name'], \Symfony\Component\Yaml\Yaml::dump($yml, 4));
-                    $output->writeln('ok');
+            $this->fixContent($file, $output, $namespace, $modelLocations);
+        }
+        $output->writeln('All fixed!');
+    }
+
+    private function locateModels($files, $namespace) {
+        $locator = array();
+        foreach ($files as $file) {
+            list($modelName) = explode('.', $file['name']);
+            $locator[$modelName] = "$namespace\\{$file['bundle']}\\Entity\\{$modelName}";
+        }
+        return $locator;
+    }
+
+    private function fixContent($file, $output, $namespace, $modelLocations) {
+        $yml = \Symfony\Component\Yaml\Yaml::parse($file['path'] . $file['name']);
+        foreach ($yml as $modelName => $modelData) {
+            $output->write(sprintf('  > Check content of: <info>%s</info> ... ', $file['name']));
+            if (strpos($modelName, '\\') === false) {
+                unset($yml[$modelName]);
+                $yml[$modelLocations[$modelName]] = $modelData;
+            }
+            foreach(array('oneToOne','oneToMany','manyToOne') as $relationType){
+                if(isset($modelData[$relationType])){
+                    foreach ($modelData[$relationType] as $relationName => $relationData) {
+                        if(isset($relationData['targetEntity']) && strpos($relationData['targetEntity'], '\\') === false && isset($modelLocations[$relationData['targetEntity']])){
+                            $yml[$modelName][$relationType][$relationName]['targetEntity'] = $modelLocations[$relationData['targetEntity']];
+                        }
+                    }
+
                 }
             }
+            file_put_contents($file['path'] . $file['name'], \Symfony\Component\Yaml\Yaml::dump($yml, 4));
+            $output->writeln('ok');
         }
-
-        $output->writeln('All fixed!');
     }
 
     private function renameFile(&$file, OutputInterface $output) {
