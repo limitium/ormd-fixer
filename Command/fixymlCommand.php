@@ -24,56 +24,72 @@ class FixymlCommand extends ContainerAwareCommand {
 
 
         $files = $this->getModelFiles($namespace);
-        $modelLocations = $this->locateModels($files, $namespace);
-        foreach ($files as $file) {
-            $this->renameFile($file, $output);
-            $this->fixContent($file, $output, $namespace, $modelLocations);
-        }
+
+        $this->renameFile($files, $output);
+
+        $this->fixContent($files, $output,  $this->locateModels($files, $namespace));
+
         $output->writeln('All fixed!');
     }
 
     private function locateModels($files, $namespace) {
         $locator = array();
         foreach ($files as $file) {
-            list($modelName) = explode('.', $file['name']);
+            $modelName = $this->getShortName($file);
             $locator[$modelName] = "$namespace\\{$file['bundle']}\\Entity\\{$modelName}";
         }
         return $locator;
     }
 
-    private function fixContent($file, $output, $namespace, $modelLocations) {
-        $yml = \Symfony\Component\Yaml\Yaml::parse($file['path'] . $file['name']);
-        foreach ($yml as $modelName => $modelData) {
-            $output->write(sprintf('  > Check content of: <info>%s</info> ... ', $file['name']));
-            if (strpos($modelName, '\\') === false) {
-                unset($yml[$modelName]);
-                $yml[$modelLocations[$modelName]] = $modelData;
+    private function getShortName($file) {
+        list($modelName) = explode('.', $file['name']);
+        return $modelName;
+    }
+
+    private function fixContent($files, $output, $modelLocations) {
+        foreach ($files as $path => $file) {
+
+
+            $output->write(sprintf('  > Checking of: <info>%s</info> ... ', $file['name']));
+            $yml = \Symfony\Component\Yaml\Yaml::parse($path);
+
+            $shortName = $this->getShortName($file);
+
+            if (isset($yml[$shortName])) {
+                $yml[$modelLocations[$shortName]] = $yml[$shortName];
+                unset($yml[$shortName]);
             }
-            foreach(array('oneToOne','oneToMany','manyToOne') as $relationType){
-                if(isset($modelData[$relationType])){
+
+            $modelData = $yml[$modelLocations[$shortName]];
+            foreach (array('oneToOne', 'oneToMany', 'manyToOne') as $relationType) {
+                if (isset($modelData[$relationType])) {
                     foreach ($modelData[$relationType] as $relationName => $relationData) {
-                        if(isset($relationData['targetEntity']) && strpos($relationData['targetEntity'], '\\') === false && isset($modelLocations[$relationData['targetEntity']])){
-                            $yml[$modelName][$relationType][$relationName]['targetEntity'] = $modelLocations[$relationData['targetEntity']];
+                        if (isset($relationData['targetEntity']) && strpos($relationData['targetEntity'], '\\') === false && isset($modelLocations[$relationData['targetEntity']])) {
+                            $yml[$modelLocations[$shortName]][$relationType][$relationName]['targetEntity'] = $modelLocations[$relationData['targetEntity']];
                         }
                     }
 
                 }
             }
-            file_put_contents($file['path'] . $file['name'], \Symfony\Component\Yaml\Yaml::dump($yml, 4));
+            file_put_contents($path, \Symfony\Component\Yaml\Yaml::dump($yml, 4));
             $output->writeln('ok');
         }
     }
 
-    private function renameFile(&$file, OutputInterface $output) {
-        $fileParts = explode('.', $file['name']);
-        if ($fileParts[1] == 'dcm') {
-            $newName = $fileParts[0] . '.orm.' . $fileParts[2];
-            $output->write(sprintf('  > Fixing name: <info>%s</info> to <info>%s</info> ... ', $file['name'], $newName));
-            if (!rename($file['path'] . $file['name'], $file['path'] . $newName)) {
-                throw new \Exception('Cann\'t to rename metadata file ' . $file['name']);
+    private function renameFile(&$files, OutputInterface $output) {
+        foreach ($files as $path => $file) {
+            $fileParts = explode('.', $file['name']);
+            if ($fileParts[1] == 'dcm') {
+                $newName = $fileParts[0] . '.orm.' . $fileParts[2];
+                $output->write(sprintf('  > Fixing name: <info>%s</info> to <info>%s</info> ... ', $file['name'], $newName));
+                if (!rename($path, $file['path'] . $newName)) {
+                    throw new \Exception('Cann\'t to rename metadata file ' . $file['name']);
+                }
+                $output->writeln('ok');
+                $file['name'] = $newName;
+                $files[$file['path'] . $newName] = $file;
+                unset($files[$path]);
             }
-            $output->writeln('ok');
-            $file['name'] = $newName;
         }
     }
 
@@ -91,7 +107,7 @@ class FixymlCommand extends ContainerAwareCommand {
                         if (is_file($metadataModelFile)) {
                             $fileParts = explode('.', $metadataModelFileName);
                             if (sizeof($fileParts) == 3) {
-                                $modelFiles[] = array(
+                                $modelFiles[$metadataDir . DIRECTORY_SEPARATOR . $metadataModelFileName] = array(
                                     'bundle' => $bundleName,
                                     'path' => $metadataDir . DIRECTORY_SEPARATOR,
                                     'name' => $metadataModelFileName
