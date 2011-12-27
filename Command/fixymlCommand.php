@@ -71,6 +71,15 @@ class FixymlCommand extends ContainerAwareCommand {
 
                 }
             }
+
+            if(isset($modelData['discriminatorMap'])){
+                foreach ($modelData['discriminatorMap'] as $modelName => $descriminator) {
+                    if(isset($modelLocations[$descriminator])){
+                        $yml[$modelLocations[$shortName]]['discriminatorMap'][$modelName] = $modelLocations[$descriminator];
+                    }
+                }
+            }
+            
             file_put_contents($path, \Symfony\Component\Yaml\Yaml::dump($yml, 4));
             $output->writeln('ok');
         }
