@@ -27,7 +27,7 @@ class FixymlCommand extends ContainerAwareCommand {
 
         $this->renameFile($files, $output);
 
-        $this->fixContent($files, $output,  $this->locateModels($files, $namespace));
+        $this->fixContent($files, $output, $this->locateModels($files, $namespace));
 
         $output->writeln('All fixed!');
     }
@@ -72,15 +72,24 @@ class FixymlCommand extends ContainerAwareCommand {
                 }
             }
 
-            if(isset($modelData['discriminatorMap'])){
+            if (isset($modelData['manyToOne'])) {
+                foreach ($modelData[$relationType] as $relationName => $relationData) {
+                    if ($relationData['joinColumns'] == null) {
+                        $field = strtolower(preg_replace('/(?<=[a-z])([A-Z])/', '_$1', $relationName));
+                        $yml[$modelLocations[$shortName]][$relationType][$relationName]['joinColumns'] = array($field . '_id' => array('referencedColumnName' => 'id'));
+                    }
+                }
+            }
+
+            if (isset($modelData['discriminatorMap'])) {
                 foreach ($modelData['discriminatorMap'] as $modelName => $descriminator) {
-                    if(isset($modelLocations[$descriminator])){
+                    if (isset($modelLocations[$descriminator])) {
                         $yml[$modelLocations[$shortName]]['discriminatorMap'][$modelName] = $modelLocations[$descriminator];
                     }
                 }
             }
-            
-            file_put_contents($path, \Symfony\Component\Yaml\Yaml::dump($yml, 4));
+
+            file_put_contents($path, \Symfony\Component\Yaml\Yaml::dump($yml, 10));
             $output->writeln('ok');
         }
     }
