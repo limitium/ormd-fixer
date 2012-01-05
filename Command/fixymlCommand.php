@@ -67,16 +67,20 @@ class FixymlCommand extends ContainerAwareCommand {
                         if (isset($relationData['targetEntity']) && strpos($relationData['targetEntity'], '\\') === false && isset($modelLocations[$relationData['targetEntity']])) {
                             $yml[$modelLocations[$shortName]][$relationType][$relationName]['targetEntity'] = $modelLocations[$relationData['targetEntity']];
                         }
+                        if(isset($relationData['cascade'])){
+                            foreach ($relationData['cascade'] as $k => $cascadeVal) {
+                                $yml[$modelLocations[$shortName]][$relationType][$relationName]['cascade'][$k] = strtolower(substr($cascadeVal,7));
+                            }
+                        }
                     }
-
                 }
             }
 
             if (isset($modelData['manyToOne'])) {
-                foreach ($modelData[$relationType] as $relationName => $relationData) {
+                foreach ($modelData['manyToOne'] as $relationName => $relationData) {
                     if ($relationData['joinColumns'] == null) {
                         $field = strtolower(preg_replace('/(?<=[a-z])([A-Z])/', '_$1', $relationName));
-                        $yml[$modelLocations[$shortName]][$relationType][$relationName]['joinColumns'] = array($field . '_id' => array('referencedColumnName' => 'id'));
+                        $yml[$modelLocations[$shortName]]['manyToOne'][$relationName]['joinColumns'] = array($field . '_id' => array('referencedColumnName' => 'id'));
                     }
                 }
             }
