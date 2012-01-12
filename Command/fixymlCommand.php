@@ -79,8 +79,11 @@ class FixymlCommand extends ContainerAwareCommand {
             if (isset($modelData['manyToOne'])) {
                 foreach ($modelData['manyToOne'] as $relationName => $relationData) {
                     if ($relationData['joinColumns'] == null) {
-                        $field = strtolower(preg_replace('/(?<=[a-z])([A-Z])/', '_$1', $relationName));
-                        $yml[$modelLocations[$shortName]]['manyToOne'][$relationName]['joinColumns'] = array($field . '_id' => array('referencedColumnName' => 'id'));
+                        $field = strtolower(preg_replace('/(?<=[a-z])([A-Z])/', '_$1', $relationName)). '_id';
+                        $yml[$modelLocations[$shortName]]['manyToOne'][$relationName]['joinColumns'] = array($field => array('referencedColumnName' => 'id'));
+                        if(isset($yml[$modelLocations[$shortName]]['fields'][$field])){
+                            unset($yml[$modelLocations[$shortName]]['fields'][$field]);
+                        }
                     }
                 }
             }
