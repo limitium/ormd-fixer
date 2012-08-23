@@ -1,6 +1,6 @@
 <?php
 
-namespace Limitium\ORMBundle\Command;
+namespace Limitium\ORMDFixer\Command;
 
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputArgument;
@@ -13,7 +13,7 @@ use Symfony\Component\DependencyInjection\Loader;
 class FixymlCommand extends ContainerAwareCommand {
     protected function configure() {
         $this
-            ->setName('ORM:fixyml')
+            ->setName('Yaml:fix')
             ->setDescription('Fix ORM Designer names and namespace')
             ->addArgument('namespace', InputArgument::REQUIRED, 'What is namespace? Example: "Acme"');
 
