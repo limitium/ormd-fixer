@@ -1,0 +1,15 @@
+{
+    "name": "limitium/ORMBundle",
+    "description": "Fix ORM Designer yml files",
+    "type": "symfony-bundle",
+    "keywords": ["symfony","yaml","ORM","designer"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "limitium"            
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0"
+    }
+}
