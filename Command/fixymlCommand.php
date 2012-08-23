@@ -13,7 +13,7 @@ use Symfony\Component\DependencyInjection\Loader;
 class FixymlCommand extends ContainerAwareCommand {
     protected function configure() {
         $this
-            ->setName('Yaml:fix')
+            ->setName('yaml:fix')
             ->setDescription('Fix ORM Designer names and namespace')
             ->addArgument('namespace', InputArgument::REQUIRED, 'What is namespace? Example: "Acme"');
 
